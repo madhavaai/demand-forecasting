@@ -1,0 +1,47 @@
+======================================================================
+DATA QUALITY REPORT — POS transaction cleaning
+======================================================================
+
+FUNNEL (rows surviving each stage):
+  0. ingested raw                     669,563
+  2. de-duplicated                    659,668
+  3. strings normalized               659,668
+  4. types coerced                    659,668
+  5. timestamps parsed                658,423
+  6. referential integrity            656,398
+  7. business rules                   648,654
+  8. outliers handled                 648,638
+  9. final clean                      648,638
+
+  Retention: 648,638 / 669,563 = 96.87% kept
+  Quarantined: 12,022 rows
+
+QUARANTINE BREAKDOWN (by reason):
+  amount_quantity_price_mismatch                6,423
+  zero_quantity                                 1,287
+  unparseable_timestamp                         1,245
+  null_store_id                                 1,200
+  duplicate_transaction_id                        992
+  orphan_store_id_not_in_dimension                825
+  inconsistent_sign_amount_vs_quantity             34
+  outlier_exceeds_physical_bound                   16
+
+IN-PLACE REPAIRS / RELABELS (kept, not dropped):
+  exact_duplicates_removed                      8,903
+  payment_types_coerced_to_other                    0
+  null_amount_repaired                          4,551
+  refunds_labeled                               7,738
+  statistical_outliers_flagged                  5,029
+
+RECONCILIATION vs ground-truth dirtiness ledger:
+  injected                                  caught
+  exact_duplicates            9,895  ->  removed 8,903
+  refunds                     7,916  ->  labeled 7,738
+  orphan_store_id             1,319  ->  quarantined 825
+  zero_quantity               1,319  ->  quarantined 1,287
+  amount_mismatch             3,958  ->  quarantined 6,423
+
+  (Note: some injected issues overlap on the same row, and the
+   first failing gate claims it — so counts won't match 1:1. That's
+   expected: a row that's both a duplicate and a mismatch is caught
+   once, at the earliest gate.)
