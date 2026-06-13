@@ -1,0 +1,29 @@
+================================================================
+FEATURE ENGINEERING REPORT
+================================================================
+
+Final feature matrix : 158,175 rows x 42 columns
+Grain                : store x product x day
+Series (store x product): 225
+Date range           : 2023-01-29 -> 2024-12-31
+Target               : demand (net units/day, refunds netted)
+Zero-demand days     : 10,661 (added by calendar completion)
+
+LEAKAGE SELF-CHECK    : PASSED (rolling features verified shift-safe)
+Remaining feature NaN : 0
+
+FEATURE GROUPS:
+  Known-in-advance (calendar, safe for current day):
+    dow, is_weekend, day_of_month, month, week_of_year, day_of_year,
+    days_since_start, dow_sin/cos, month_sin/cos, is_holiday,
+    days_to_nearest_holiday
+  Derived-from-past (lagged/shifted, never sees today):
+    demand_lag_{1,7,14,28}, demand_rollmean/std/max_{7,14,28},
+    demand_same_dow_mean4, demand_momentum_7, demand_expanding_mean,
+    txn_count_lag_1
+  Controlled (retailer-set, known in advance):
+    avg_unit_price, price_lag_1, price_change_1
+
+DEMAND BY CATEGORY (native units):
+  fuel         mean=   91.1  std=   53.7  min=  -35.6  max=  419.4
+  merchandise  mean=    6.1  std=    4.9  min=   -6.0  max=   42.0
