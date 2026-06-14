@@ -1,0 +1,40 @@
+====================================================================
+FORECASTING MODEL RESULTS — held-out temporal test block
+====================================================================
+Test window: 2024-11-17 -> 2024-12-31  (10,125 rows)
+
+Lower WAPE/MAE/RMSE = better. Bias>0 = over-forecast.
+
+Model                WAPE      MAE     RMSE     Bias
+----------------------------------------------------
+Seasonal-naive     0.5778    21.64    37.37     0.55
+LightGBM           0.3796    14.21    25.24    -1.36
+Prophet            0.4286    16.05    27.26     0.80
+Ensemble           0.3796    14.21    25.24    -1.36
+
+Best model: LightGBM (WAPE 0.3796), 34.3% better than the baseline.
+
+Ensemble weights (tuned on validation): {'baseline': np.float64(0.0), 'lightgbm': np.float64(1.0), 'prophet': np.float64(0.0)}
+
+LightGBM WAPE by category:
+  fuel          0.3716
+  merchandise   0.4744
+
+Top LightGBM features (by importance):
+  avg_unit_price            2306
+  price_change_1            1330
+  store_id                  1308
+  price_lag_1               722
+  demand_rollmean_28        658
+  product                   571
+  demand_expanding_mean     552
+  month_cos                 417
+  day_of_year               392
+  days_since_start          392
+  demand_rollmean_14        309
+  dow                       279
+
+METRIC NOTE: WAPE (not MAPE) is the headline metric because
+~7% of store/product/days have zero demand, which makes MAPE
+undefined (division by zero). WAPE pools error over total
+volume and is the retail-standard for intermittent demand.
