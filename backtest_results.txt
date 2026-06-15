@@ -1,0 +1,47 @@
+======================================================================
+STAGE 4 — ROBUSTNESS & BACKTESTING
+======================================================================
+
+PART 1 — EXPANDING-WINDOW BACKTEST (rolling origin, 5 folds)
+Train expands each fold; test blocks march forward, non-overlapping.
+
+fold test window                train_rows  base WAPE  lgbm WAPE   impr %
+-------------------------------------------------------------------------
+1    2024-08-04→2024-09-02         117,675     0.5105     0.3450    32.4%
+2    2024-09-03→2024-10-02         124,425     0.5270     0.3580    32.1%
+3    2024-10-03→2024-11-01         131,175     0.5666     0.3710    34.5%
+4    2024-11-02→2024-12-01         137,925     0.5646     0.3686    34.7%
+5    2024-12-02→2024-12-31         144,675     0.5859     0.3838    34.5%
+-------------------------------------------------------------------------
+mean                                           0.5509     0.3653    33.6%
+std                                            0.0311     0.0146     1.3%
+
+LightGBM beats the baseline on 5/5 folds. Mean improvement 33.6% (±1.3).
+The low std across folds is the point: the gain is stable, not a
+lucky single window.
+
+
+PART 2 — FEATURE-GROUP ABLATION (latest fold)
+Test window: 2024-12-02 → 2024-12-31
+Each row drops one group from the full model. Larger positive Δ
+means that group mattered more (removing it hurt accuracy more).
+
+variant                         #feat      WAPE  Δ vs full
+----------------------------------------------------------
+FULL (all features)                36    0.3838    +0.0000
+– drop lags                        32    0.3823    -0.0015
+– drop rolling                     24    0.3820    -0.0018
+– drop calendar                    23    0.3908    +0.0070
+– drop price_current               34    0.4170    +0.0332
+– drop price_past                  34    0.3825    -0.0013
+– drop categorical                 33    0.3904    +0.0066
+CALENDAR-ONLY (no history)         16    0.4168    +0.0330
+
+ROBUSTNESS VERDICT (current-day price):
+Dropping current-day price raises WAPE by +0.0332 (0.4170 vs 0.3838) — the model
+relies on it substantially. This is the honest weak point: current-day
+average price is treated as known-in-advance (the retailer sets it),
+but if that assumption fails, price_lag_1 must be used instead.
+CRUCIALLY: even with current-day price removed entirely, WAPE
+0.4170 still beats the seasonal-naive baseline (0.5859) by 29% —
+so the model's value survives the worst-case assumption.
