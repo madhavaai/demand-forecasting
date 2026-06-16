@@ -1,0 +1,107 @@
+
+====================================================================
+MONITORING PASS: A — HEALTHY PRODUCTION (no injected drift)
+====================================================================
+
+Normal operating WAPE: 0.3743
+Alert threshold (+5%): 0.3931
+
+Weekly overall WAPE:
+  2024-09-30   WAPE 0.3955  (n=1,350)  <-- DEGRADED
+  2024-10-07   WAPE 0.3657  (n=1,575)
+  2024-10-14   WAPE 0.3715  (n=1,575)
+  2024-10-21   WAPE 0.3588  (n=1,575)
+  2024-10-28   WAPE 0.3746  (n=1,575)
+  2024-11-04   WAPE 0.3741  (n=1,575)
+  2024-11-11   WAPE 0.3521  (n=1,575)
+  2024-11-18   WAPE 0.3675  (n=1,575)
+  2024-11-25   WAPE 0.3822  (n=1,575)
+  2024-12-02   WAPE 0.3815  (n=1,575)
+  2024-12-09   WAPE 0.3807  (n=1,575)
+  2024-12-16   WAPE 0.3830  (n=1,575)
+  2024-12-23   WAPE 0.3929  (n=1,575)
+  2024-12-30   WAPE 0.3696  (n=450)
+
+Mean WAPE by store_type (segment health, worst first):
+  suburban   0.4162
+  urban      0.3935
+  highway    0.3329
+
+INPUT drift — PSI (training vs production):
+  demand_lag_7           PSI 0.0190  [stable]
+  demand_rollmean_28     PSI 0.0744  [stable]
+  avg_unit_price         PSI 0.0010  [stable]
+  dow                    PSI 0.0007  [stable]
+
+TARGET / PREDICTION drift — PSI:
+  actual demand          PSI 0.0252  [stable]
+  model predictions      PSI 0.2044  [SIGNIFICANT]
+
+RETRAIN DECISION:
+  system healthy — no retrain needed (longest degraded run: 1 wk < 2)
+
+====================================================================
+MONITORING PASS: B — DRIFT INJECTED (highway -35% demand from Nov 15)
+====================================================================
+
+Normal operating WAPE: 0.3743
+Alert threshold (+5%): 0.3931
+
+Weekly overall WAPE:
+  2024-09-30   WAPE 0.3955  (n=1,350)  <-- DEGRADED
+  2024-10-07   WAPE 0.3657  (n=1,575)
+  2024-10-14   WAPE 0.3715  (n=1,575)
+  2024-10-21   WAPE 0.3588  (n=1,575)
+  2024-10-28   WAPE 0.3746  (n=1,575)
+  2024-11-04   WAPE 0.3741  (n=1,575)
+  2024-11-11   WAPE 0.4037  (n=1,575)  <-- DEGRADED
+  2024-11-18   WAPE 0.4631  (n=1,575)  <-- DEGRADED
+  2024-11-25   WAPE 0.4598  (n=1,575)  <-- DEGRADED
+  2024-12-02   WAPE 0.4736  (n=1,575)  <-- DEGRADED
+  2024-12-09   WAPE 0.4813  (n=1,575)  <-- DEGRADED
+  2024-12-16   WAPE 0.4742  (n=1,575)  <-- DEGRADED
+  2024-12-23   WAPE 0.4711  (n=1,575)  <-- DEGRADED
+  2024-12-30   WAPE 0.4648  (n=450)  <-- DEGRADED
+
+Mean WAPE by store_type (segment health, worst first):
+  highway    0.4608
+  suburban   0.4162
+  urban      0.3935
+
+INPUT drift — PSI (training vs production):
+  demand_lag_7           PSI 0.0190  [stable]
+  demand_rollmean_28     PSI 0.0744  [stable]
+  avg_unit_price         PSI 0.0010  [stable]
+  dow                    PSI 0.0007  [stable]
+
+TARGET / PREDICTION drift — PSI:
+  actual demand          PSI 0.0782  [stable]
+  model predictions      PSI 0.2044  [SIGNIFICANT]
+
+RETRAIN DECISION:
+  >>> RETRAIN RECOMMENDED
+      - performance: 8 consecutive weeks with WAPE > 0.393 (normal level 0.374 +5%)
+
+====================================================================
+INTERPRETATION — why this matters
+====================================================================
+Pass B is pure CONCEPT drift: the input→demand relationship changed
+for highway stores, but the model's INPUT features did not move.
+
+Which detectors fired:
+  - PERFORMANCE: YES. Overall weekly WAPE climbed and stayed above
+    threshold; the SEGMENT view is the smoking gun — highway flips
+    from the BEST store_type in pass A to the WORST in pass B.
+  - INPUT PSI: NO (stayed stable) — inputs were untouched.
+  - PREDICTION PSI: UNINFORMATIVE — it reads identically (~0.20) in
+    BOTH passes, because predictions are unchanged. It cannot tell the
+    drift scenario apart from the healthy one (the 0.20 is a benign
+    seasonal shift in predicted levels, present with or without drift).
+  - TARGET PSI: only mildly (the drop is diluted across all segments).
+
+THE LESSON: concept drift is invisible to input- and prediction-
+distribution monitoring. Only OUTCOME monitoring (error vs actuals,
+especially per-segment) catches it. A system that watched feature
+drift alone would have served stale forecasts into a changed market
+for weeks. This is why the retrain trigger is driven by performance,
+with PSI as corroboration — not the other way around.
